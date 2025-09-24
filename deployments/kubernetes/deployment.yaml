@@ -1,0 +1,220 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: face-recognition-api
+  namespace: face-recognition
+  labels:
+    app: face-recognition
+    component: api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: face-recognition
+      component: api
+  template:
+    metadata:
+      labels:
+        app: face-recognition
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - face-recognition
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: api
+        image: face-recognition:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: face-recognition-secrets
+              key: database-url
+        - name: DEVICE
+          value: "cuda"  # or "cpu"
+        - name: INDEX_TYPE
+          value: "ivfpq"
+        - name: SIMILARITY_THRESHOLD
+          value: "0.65"
+        envFrom:
+        - configMapRef:
+            name: face-recognition-config
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+            nvidia.com/gpu: "1"  # Request GPU
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: index-storage
+          mountPath: /app/data
+        - name: model-cache
+          mountPath: /root/.insightface
+      volumes:
+      - name: index-storage
+        persistentVolumeClaim:
+          claimName: face-index-pvc
+      - name: model-cache
+        emptyDir: {}
+      nodeSelector:
+        nvidia.com/gpu: "true"  # Schedule on GPU nodes
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: face-recognition-api
+  namespace: face-recognition
+  labels:
+    app: face-recognition
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: face-recognition
+    component: api
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: face-recognition-config
+  namespace: face-recognition
+data:
+  LOG_LEVEL: "INFO"
+  FACE_MODEL: "buffalo_l"
+  DETECTOR_BACKEND: "scrfd"
+  TOP_K_RESULTS: "5"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+  METRICS_ENABLED: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: face-recognition-secrets
+  namespace: face-recognition
+type: Opaque
+stringData:
+  database-url: "postgresql+asyncpg://user:password@postgres:5432/facedb"
+  api-key: "your-secret-api-key"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: face-index-pvc
+  namespace: face-recognition
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: face-recognition-hpa
+  namespace: face-recognition
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: face-recognition-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: face_recognition_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: face-recognition-ingress
+  namespace: face-recognition
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+  - hosts:
+    - face-api.example.com
+    secretName: face-recognition-tls
+  rules:
+  - host: face-api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: face-recognition-api
+            port:
+              number: 80

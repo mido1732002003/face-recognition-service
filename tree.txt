@@ -1,0 +1,109 @@
+face-recognition-service/
+├── .editorconfig
+├── .env.example
+├── .gitignore
+├── .pre-commit-config.yaml
+├── LICENSE
+├── Makefile
+├── README.md
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+├── requirements.txt
+├── ruff.toml
+├── alembic.ini
+├── alembic/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       └── 001_initial_schema.py
+├── api/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── dependencies.py
+│   ├── middleware.py
+│   └── routers/
+│       ├── __init__.py
+│       ├── enrollment.py
+│       ├── identification.py
+│       ├── persons.py
+│       ├── health.py
+│       └── metrics.py
+├── core/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── database.py
+│   ├── exceptions.py
+│   └── constants.py
+├── services/
+│   ├── __init__.py
+│   ├── face_engine.py
+│   ├── face_quality.py
+│   ├── liveness.py
+│   ├── enrollment_service.py
+│   ├── identification_service.py
+│   ├── person_service.py
+│   └── background_jobs.py
+├── indexing/
+│   ├── __init__.py
+│   ├── base.py
+│   ├── faiss_index.py
+│   ├── ivfpq_index.py
+│   ├── scann_adapter.py
+│   ├── milvus_adapter.py
+│   └── qdrant_adapter.py
+├── utils/
+│   ├── __init__.py
+│   ├── logging.py
+│   ├── metrics.py
+│   └── image_utils.py
+├── scripts/
+│   ├── download_models.py
+│   ├── init_db.py
+│   ├── migrate.py
+│   ├── seed_data.py
+│   └── reindex.py
+├── storage/
+│   └── index/
+│       └── .gitkeep
+├── data/
+│   └── .gitkeep
+├── logs/
+│   └── .gitkeep
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── fixtures/
+│   │   └── mock_faces.py
+│   ├── unit/
+│   │   ├── test_face_engine.py
+│   │   └── test_indexing.py
+│   └── integration/
+│       ├── test_enrollment.py
+│       ├── test_identification.py
+│       └── test_health.py
+├── notebooks/
+│   ├── threshold_calibration.ipynb
+│   ├── batch_enrollment.ipynb
+│   └── kaggle_deployment.ipynb
+├── docs/
+│   ├── architecture.md
+│   ├── optimization.md
+│   └── postman_collection.json
+├── clients/
+│   ├── python/
+│   │   └── example.py
+│   └── nodejs/
+│       ├── example.js
+│       └── package.json
+├── deployments/
+│   ├── kubernetes/
+│   │   └── deployment.yaml
+│   └── helm/
+│       └── face-recognition/
+│           ├── Chart.yaml
+│           └── values.yaml
+└── monitoring/
+    └── prometheus.yml

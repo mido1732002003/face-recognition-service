@@ -1,0 +1,274 @@
+{
+  "info": {
+    "name": "Face Recognition Service",
+    "description": "API collection for Face Recognition Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enrollment",
+      "item": [
+        {
+          "name": "Enroll Faces",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "quality_threshold",
+                  "value": "0.5",
+                  "type": "text"
+                },
+                {
+                  "key": "update_if_exists",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/enroll/{{person_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "enroll", "{{person_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Identification",
+      "item": [
+        {
+          "name": "Identify Face",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "similarity_threshold",
+                  "value": "0.65",
+                  "type": "text"
+                },
+                {
+                  "key": "top_k",
+                  "value": "5",
+                  "type": "text"
+                },
+                {
+                  "key": "return_face_data",
+                  "value": "false",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/identify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "identify"]
+            }
+          }
+        },
+        {
+          "name": "Verify Face",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "similarity_threshold",
+                  "value": "0.65",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/verify/{{person_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "verify", "{{person_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Persons",
+      "item": [
+        {
+          "name": "Get Person",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/persons/{{person_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "persons", "{{person_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Persons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/persons?offset=0&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "persons"],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Person",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"person_123\",\n  \"name\": \"John Doe\",\n  \"metadata\": {\n    \"department\": \"Engineering\",\n    \"role\": \"Developer\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/persons",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "persons"]
+            }
+          }
+        },
+        {
+          "name": "Delete Person",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/persons/{{person_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "persons", "{{person_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "person_id",
+      "value": "person_001",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

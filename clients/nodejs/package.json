@@ -1,0 +1,16 @@
+{
+  "name": "face-recognition-client",
+  "version": "1.0.0",
+  "description": "Node.js client for Face Recognition Service",
+  "main": "example.js",
+  "scripts": {
+    "start": "node example.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "form-data": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

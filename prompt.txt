@@ -1,0 +1,142 @@
+Claude, act as a principal ML platform engineer. Build an enterprise-grade, production-oriented Face Recognition (1:N identification) service that I can run locally and in containers. Follow all instructions below exactly.
+
+Core objective
+
+Deliver a complete system where I POST an image of a person and the service returns the person’s identity by searching a face database (1:N), with production-ready design, code, tests, and docs.
+Stack: Python 3.11, FastAPI (+ Uvicorn), InsightFace (ArcFace embeddings, L2-normalized) and RetinaFace or SCRFD for detection/alignment, FAISS for 1:N, PostgreSQL (async SQLAlchemy) for metadata, FAISS index persisted to disk.
+Mandatory formatting and delivery style (follow precisely)
+
+Split your entire response into sequential parts, and at the end of EACH part write exactly: continue? (y/n)
+You must decide the number, names, and ordering of parts (do NOT predefine them in this prompt).
+Every source file must be shown in its own dedicated code block, prefixed by a single header line:
+path: <relative/unix-style/file/path.ext>
+Then the file contents, fenced with the correct language (e.g., python, toml, yaml, json, md, txt).
+No file content should appear without a path: header. Do not mix multiple files in one code block.
+Keep commentary concise (bulleted where helpful). Do not reveal chain-of-thought.
+Required technical choices and components
+
+Language/Runtime: Python 3.11
+Web framework: FastAPI (+ Uvicorn)
+Face stack: InsightFace with ArcFace embeddings (ensure L2-normalized embeddings). Use RetinaFace or SCRFD for detection/alignment. Choose the best default, justify it briefly, and show exactly how to swap to the other option.
+Vector index: FAISS
+Default small/gallery: IndexFlatIP (cosine via L2-normalized embeddings)
+Include an IVF+PQ option for large galleries
+Provide a clean interface to swap to Google ScaNN or a vector DB (Milvus/Qdrant) later without changing API code
+Storage: PostgreSQL via async SQLAlchemy for persons/faces/enrollments metadata. Persist FAISS index to disk.
+Settings/Secrets: Pydantic Settings (pydantic v2) + .env.example
+Packaging & tooling: pyproject.toml (or requirements.txt only if you must), ruff, black, isort, pre-commit, Makefile
+Logging & metrics: structlog with JSON logs; /metrics endpoint (Prometheus format) and /health
+Tests: pytest (unit + integration), minimal coverage, fixtures with sample images or mocks; include happy-path for enroll/identify and basic failure cases
+Containerization: Dockerfile (multi-stage) + docker-compose.yml (api, postgres, optional monitoring). Include a GPU-ready path (build/runtime) where relevant.
+Documentation: README (architecture, privacy, fairness, threshold calibration, ops), OpenAPI auto-docs, Postman collection, minimal client examples (Python + Node/JS)
+Notebooks: ROC/DET threshold calibration & FAR selection; batch enrollment; Kaggle-ready notebook (see below)
+Security & privacy basics: rate limiting placeholder, RBAC placeholder, data-retention policy notes, encryption at rest/in transit recommendations
+Liveness/anti-spoofing: pluggable placeholder module and integration point (link or note to open-source options)
+License: MIT
+Functional requirements
+
+Endpoints (at minimum):
+POST /enroll/{person_id}: accept multiple images; detect → align → embed; optional quality filter (FIQA placeholder); update FAISS + DB mapping
+POST /identify: single image; detect → align → embed → search top-k; return best match with similarity; if below threshold return Unknown
+GET /persons/{id} and GET /stats (basic introspection)
+GET /health, GET /metrics
+Threshold calibration:
+Explain and implement how to set cosine-similarity threshold from ROC/DET against a validation set
+Persist chosen threshold in config; allow runtime override via env
+Index management:
+Save/load FAISS to disk
+Background reindex job option
+Clear interface to switch to IVF+PQ or ScaNN/Milvus/Qdrant
+Data model:
+persons, faces (embedding vector metadata, quality score, image path optional), enrollments, audit timestamps
+Quality & fairness:
+Document caveats (lighting, pose, demographics), and add FIQA/liveness hooks
+Scalability:
+Show how to split concerns (detector/embedder/indexer/api), support batching & GPU, and outline sharding/partitioning strategies for large galleries
+Project content you must include
+
+A complete project file tree of all major folders and files (docs, api/app, core/services, face engine, index layer, infra, scripts, notebooks, tests, deployments, etc.)
+Fully working FastAPI service with the endpoints above, wired to InsightFace + FAISS, with a clean abstraction layer for swapping index backends
+.env.example, Pydantic settings, Alembic migrations (or a sound migration strategy)
+Dockerfile (multi-stage) and docker-compose.yml (services: api, postgres; optional monitoring stack)
+Makefile with common targets (setup, lint, format, test, run, docker-* targets, migrate)
+ruff/black/isort/pre-commit configs
+Tests (pytest) for enrollment and identify happy-path + basic failure cases
+Include tiny fake image set OR use mocks to simulate face embeddings for hermetic tests; ensure tests pass in CI without GPU
+README describing: architecture, dependencies, how to run locally, how to set the similarity threshold, privacy/fairness notes, and scaling strategies
+Include Postman collection and minimal client snippets (Python & JS)
+Notebooks:
+ROC/DET threshold calibration & FAR selection
+Batch enrollment pipeline
+Kaggle-ready notebook with exact steps:
+pip/apt installs (handle OpenCV/libgl)
+enable GPU in Kaggle
+load images from a Kaggle Dataset
+persist FAISS to /kaggle/working
+use Kaggle Secrets for env vars
+Optional lightweight training/fine-tuning path documented succinctly
+Enterprise-readiness notes:
+batching, GPU utilization, async pipelines, background jobs (Celery/RQ) with a minimal wiring example
+observability (logs/metrics/traces pointers)
+index sharding/partitioning (by region/tenant), and how to migrate to ScaNN/Milvus/Qdrant without changing application layer
+Implementation specifics and expectations
+
+Use InsightFace with ArcFace embeddings; ensure L2-normalized embeddings. Prefer the official FaceAnalysis pipeline or modular detector+embedder load; expose configuration to select model variants.
+Detection: choose RetinaFace or SCRFD as default with a short justification; document exact config to switch to the other backend.
+Search:
+Default FAISS index: IndexFlatIP for cosine on normalized vectors
+Provide IVF+PQ implementation with training/saving/loading and threshold considerations
+Abstract index operations via a clean interface (add, search, save, load, delete, rebuild, stats)
+Provide adapters/stubs for ScaNN and Milvus/Qdrant with notes on how to wire them
+DB with async SQLAlchemy 2.0 style and Alembic migrations. Entities: Person, Face, Enrollment (mapping), with timestamps and optional image path/hash/quality.
+Persist FAISS to disk on each enrollment batch or via background job; handle startup recovery (load index if present).
+Config via Pydantic Settings (.env, env vars), including thresholds, top_k, index path, model names, device (cpu/cuda), DB URL, rate limit knobs, RBAC mode.
+Logging: structlog JSON; include request IDs and correlation IDs; include timing for key stages (detect/align/embed/search).
+Metrics: Prometheus /metrics; add counters/histograms for inferences, latency, DB ops, errors; add /health.
+Security/privacy:
+rate limiting placeholder (e.g., starlette-limiter or middleware stub)
+RBAC placeholder (role checks on endpoints; simple in-memory or config-based)
+notes on encryption at rest/in transit, KMS suggestions, image handling, and data-retention policy
+Liveness/anti-spoofing:
+Provide a pluggable anti-spoofing interface and a no-op default; mention open-source options to integrate
+Edge cases:
+multiple faces in image (choose largest or configurable policy); no face found; low quality; image decode errors; unknown below threshold
+Tests:
+Use pytest for unit and integration tests
+For happy-path tests without GPU or network, mock face engine to return deterministic embeddings
+Include a few negative tests (no face, below threshold)
+Containerization:
+Multi-stage Dockerfile; CPU default using faiss-cpu and onnxruntime; optional GPU path using faiss-gpu and onnxruntime-gpu with CUDA base image
+docker-compose.yml with api, postgres, and optional monitoring (Prometheus/Grafana or exporter-only); show GPU runtime option (NVIDIA Container Toolkit)
+Clients:
+Minimal Python and Node/JS client snippets to call /enroll and /identify
+Postman collection aligned with the API
+Notebooks:
+Provide ROC/DET analysis with FAR selection and instructions to set threshold in config
+Batch enrollment notebook to mass-load a gallery
+Kaggle notebook with exact instructions and working code paths
+Documentation:
+README covers architecture decisions, operational guidance, threshold calibration, privacy/fairness caveats, scaling guidance (batching, GPU, async pipelines, index sharding), and migration to ScaNN/Milvus/Qdrant
+OpenAPI docs auto-exposed
+License: Include MIT license file.
+Success criteria (must be met)
+
+The service boots locally with clear one-shot commands (Python and Docker)
+Enrollment and identification work end-to-end using InsightFace embeddings and FAISS with configurable similarity threshold and Unknown policy
+Index persistence and DB metadata are implemented; tests pass; logs/metrics/health exist
+README + notebooks provide threshold calibration guidance and Kaggle instructions
+The design is explicitly positioned to be competitive and scalable for large enterprises
+Additional guidance to keep your output organized
+
+Begin with a short plan and project file tree
+Then provide source files grouped logically per part (config, domain/models, face engine, index, API, infra, tests, docs/notebooks, clients)
+Use small, focused modules with clear abstractions; avoid monolith files
+Include comments in code where clarity is essential
+Ensure commands in README and Makefile actually match file paths and module names
+Where real images would be required for tests, use mocks/fakes for hermetic CI; still include an example flow for manual testing with real images
+Reminder of strict formatting rules
+
+Split into sequential parts; end each with: continue? (y/n)
+Every source file must appear in its own code block with a path: header and correct language fencing
+Keep commentary concise; no chain-of-thought
+Proceed to deliver all code, configs, tests, docs, notebooks, and examples accordingly.

@@ -1,0 +1,14 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "N", "UP", "S", "B", "A", "C4", "DTZ", "T20", "SIM"]
+ignore = ["E501", "S101", "B008"]
+
+[lint.per-file-ignores]
+"tests/*" = ["S101", "S106"]
+"scripts/*" = ["T20"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

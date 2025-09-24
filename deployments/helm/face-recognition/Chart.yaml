@@ -1,0 +1,26 @@
+apiVersion: v2
+name: face-recognition
+description: Enterprise Face Recognition Service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - face-recognition
+  - biometrics
+  - ai
+  - ml
+home: https://github.com/company/face-recognition
+sources:
+  - https://github.com/company/face-recognition
+maintainers:
+  - name: ML Platform Team
+    email: ml-platform@company.com
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
