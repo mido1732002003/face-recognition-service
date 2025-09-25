@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from core.schemas import EnrollmentRequest, EnrollmentResponse
+from core.schemas import EnrollmentResponse
 from services.enrollment_service import get_enrollment_service
 from utils.logging import get_logger
 
@@ -27,7 +27,7 @@ async def enroll_faces(
     """
     if not images:
         raise HTTPException(status_code=400, detail="At least one image is required")
-    
+
     # Read image data
     image_data = []
     for image in images:
@@ -36,29 +36,21 @@ async def enroll_faces(
                 status_code=400,
                 detail=f"Invalid image type: {image.content_type}",
             )
-        
+
         contents = await image.read()
         image_data.append(contents)
-    
-    # Enroll faces
+
     enrollment_service = get_enrollment_service()
-    
+
     try:
-        result = await enrollment_service.enroll_faces(
+        # Service already returns EnrollmentResponse object
+        return await enrollment_service.enroll_faces(
             person_id=person_id,
             images=image_data,
             quality_threshold=quality_threshold,
             update_if_exists=update_if_exists,
         )
-        
-        return EnrollmentResponse(
-            enrollment_id=result["enrollment_id"],
-            person_id=result["person_id"],
-            faces_enrolled=result["faces_enrolled"],
-            status=result["status"],
-            message=result.get("errors"),
-        )
-        
+
     except Exception as e:
-        logger.error(f"Enrollment failed", error=str(e), person_id=person_id)
+        logger.error("Enrollment failed", error=str(e), person_id=person_id)
         raise HTTPException(status_code=500, detail=str(e))

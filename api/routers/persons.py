@@ -14,7 +14,7 @@ router = APIRouter()
 async def get_person(person_id: str):
     """Get person by ID"""
     person_service = get_person_service()
-    
+
     try:
         return await person_service.get_person(person_id)
     except Exception as e:
@@ -30,7 +30,7 @@ async def list_persons(
 ):
     """List all persons with pagination"""
     person_service = get_person_service()
-    
+
     try:
         return await person_service.list_persons(offset, limit, search)
     except Exception as e:
@@ -41,22 +41,14 @@ async def list_persons(
 @router.post("/persons", response_model=PersonResponse)
 async def create_person(person: PersonCreate):
     """Create a new person"""
-    # Person will be created automatically during enrollment
-    # This endpoint is for pre-creating persons with metadata
-    from services.enrollment_service import get_enrollment_service
-    
-    enrollment_service = get_enrollment_service()
-    
+    person_service = get_person_service()
+
     try:
-        await enrollment_service.update_person_metadata(
+        return await person_service.create_person(
             person_id=person.id,
             name=person.name,
             metadata=person.metadata,
         )
-        
-        person_service = get_person_service()
-        return await person_service.get_person(person.id)
-        
     except Exception as e:
         logger.error(f"Failed to create person", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -66,7 +58,7 @@ async def create_person(person: PersonCreate):
 async def delete_person(person_id: str):
     """Delete a person and all associated data"""
     person_service = get_person_service()
-    
+
     try:
         await person_service.delete_person(person_id)
         return {"message": f"Person {person_id} deleted successfully"}
@@ -79,7 +71,7 @@ async def delete_person(person_id: str):
 async def get_stats():
     """Get system statistics"""
     person_service = get_person_service()
-    
+
     try:
         return await person_service.get_stats()
     except Exception as e:

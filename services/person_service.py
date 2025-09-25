@@ -16,6 +16,36 @@ logger = get_logger(__name__)
 class PersonService:
     """Service for managing persons"""
 
+    async def create_person(self, person_id: str, name: str, metadata: Optional[dict] = None) -> PersonResponse:
+        """Create a new person"""
+        async with get_db_context() as session:
+            # Check if already exists
+            result = await session.execute(
+                select(Person).where(Person.id == person_id)
+            )
+            existing = result.scalar_one_or_none()
+            if existing:
+                raise Exception(f"Person with ID '{person_id}' already exists")
+
+            # Create new person
+            new_person = Person(
+                id=person_id,
+                name=name,
+                metadata=json.dumps(metadata) if metadata else None,
+            )
+            session.add(new_person)
+            await session.commit()
+            await session.refresh(new_person)
+
+            return PersonResponse(
+                id=new_person.id,
+                name=new_person.name,
+                metadata=json.loads(new_person.metadata) if new_person.metadata else None,
+                face_count=0,
+                created_at=new_person.created_at,
+                updated_at=new_person.updated_at,
+            )
+
     async def get_person(self, person_id: str) -> PersonResponse:
         """Get person by ID"""
         async with get_db_context() as session:
@@ -23,16 +53,16 @@ class PersonService:
                 select(Person).where(Person.id == person_id)
             )
             person = result.scalar_one_or_none()
-            
+
             if not person:
                 raise PersonNotFoundException(person_id)
-            
+
             # Get face count
             face_count_result = await session.execute(
                 select(func.count(Face.id)).where(Face.person_id == person_id)
             )
             face_count = face_count_result.scalar() or 0
-            
+
             return PersonResponse(
                 id=person.id,
                 name=person.name,
@@ -51,28 +81,28 @@ class PersonService:
         """List all persons with pagination"""
         async with get_db_context() as session:
             query = select(Person)
-            
+
             if search:
                 query = query.where(
-                    Person.id.ilike(f"%{search}%") | 
-                    Person.name.ilike(f"%{search}%")
+                    Person.id.ilike(f"%{search}%")
+                    | Person.name.ilike(f"%{search}%")
                 )
-            
+
             # Get total count
             count_result = await session.execute(
                 select(func.count()).select_from(query.subquery())
             )
             total = count_result.scalar() or 0
-            
+
             # Get paginated results
             query = query.offset(offset).limit(limit).order_by(Person.created_at.desc())
             result = await session.execute(query)
             persons = result.scalars().all()
-            
+
             # Get face counts
             person_ids = [p.id for p in persons]
             face_counts = {}
-            
+
             if person_ids:
                 face_count_result = await session.execute(
                     select(Face.person_id, func.count(Face.id))
@@ -80,18 +110,20 @@ class PersonService:
                     .group_by(Face.person_id)
                 )
                 face_counts = dict(face_count_result.all())
-            
+
             items = []
             for person in persons:
-                items.append(PersonResponse(
-                    id=person.id,
-                    name=person.name,
-                    metadata=json.loads(person.metadata) if person.metadata else None,
-                    face_count=face_counts.get(person.id, 0),
-                    created_at=person.created_at,
-                    updated_at=person.updated_at,
-                ))
-            
+                items.append(
+                    PersonResponse(
+                        id=person.id,
+                        name=person.name,
+                        metadata=json.loads(person.metadata) if person.metadata else None,
+                        face_count=face_counts.get(person.id, 0),
+                        created_at=person.created_at,
+                        updated_at=person.updated_at,
+                    )
+                )
+
             return {
                 "items": items,
                 "total": total,
@@ -106,14 +138,14 @@ class PersonService:
                 select(Person).where(Person.id == person_id)
             )
             person = result.scalar_one_or_none()
-            
+
             if not person:
                 raise PersonNotFoundException(person_id)
-            
+
             # Faces will be cascade deleted
             await session.delete(person)
             await session.commit()
-            
+
             # TODO: Remove embeddings from index
             logger.warning(f"Person {person_id} deleted but embeddings remain in index")
 
@@ -124,11 +156,12 @@ class PersonService:
             person_count = await session.execute(select(func.count(Person.id)))
             face_count = await session.execute(select(func.count(Face.id)))
             enrollment_count = await session.execute(select(func.count(Enrollment.id)))
-            
+
             # Get index stats
             from indexing import get_index
             index = await get_index()
-            
+
+            from api.config import settings
             return {
                 "total_persons": person_count.scalar() or 0,
                 "total_faces": face_count.scalar() or 0,

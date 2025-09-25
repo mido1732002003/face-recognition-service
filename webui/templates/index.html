@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Face Recognition UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            text-align: center;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        img {
+            max-width: 300px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition Demo</h1>
+
+    <form id="upload-form" action="/identify" method="post" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required onchange="previewImage(event)">
+        <br>
+        <img id="preview" src="" alt="" style="display:none;">
+        <br>
+        <button type="submit">Identify</button>
+    </form>
+
+    {% if result %}
+    <div class="result">
+        <h2>Result: {{ result }}</h2>
+    </div>
+    {% endif %}
+
+    <script>
+        function previewImage(event) {
+            const preview = document.getElementById('preview');
+            preview.src = URL.createObjectURL(event.target.files[0]);
+            preview.style.display = 'block';
+        }
+
+        // لما الفورم يتبعت نخفي الصورة
+        document.getElementById('upload-form').addEventListener('submit', function() {
+            const preview = document.getElementById('preview');
+            preview.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

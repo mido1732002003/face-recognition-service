@@ -1,5 +1,6 @@
 import os
 import uuid
+import io
 from typing import Optional
 
 import cv2
@@ -38,21 +39,22 @@ def save_image_to_disk(
     return file_path
 
 
-def validate_image(pil_image: Image.Image, min_size: int = 50) -> bool:
+def validate_image(image_bytes: bytes, min_size: int = 50) -> Image.Image:
     """
-    Validate if the image is usable for face recognition.
-    - Must be larger than `min_size` in both width and height.
-    - Must have 3 channels (RGB).
+    Validate and load an image from raw bytes.
+    - Returns a PIL Image if valid, raises ValueError if not.
     """
-    if pil_image is None:
-        return False
+    try:
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except Exception:
+        raise ValueError("Invalid image data: cannot open as image")
 
     width, height = pil_image.size
     if width < min_size or height < min_size:
-        return False
+        raise ValueError(f"Image too small: {width}x{height}, min={min_size}")
 
     cv_img = pil_to_cv2(pil_image)
     if len(cv_img.shape) != 3 or cv_img.shape[2] != 3:
-        return False
+        raise ValueError("Invalid image: must have 3 channels (RGB)")
 
-    return True
+    return pil_image
