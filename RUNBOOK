@@ -1,0 +1,133 @@
+# Runbook
+
+## Prerequisites
+- Python 3.11+
+- pip (or uv)
+- Docker & Docker Compose
+- Git
+- (Optional) NVIDIA drivers + CUDA 11.8+ for GPU support
+
+## Installation & Setup
+git clone <repository>
+cd face-recognition-service
+
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+# uv pip install -r requirements.txt
+
+python scripts/download_models.py
+
+## Database setup
+docker compose up -d postgres
+docker compose ps
+alembic upgrade head
+python scripts/init_db.py
+
+## Environment configuration
+cp .env.example .env
+
+Edit `.env` and configure:
+- DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/facedb  
+- FACE_MODEL=buffalo_l  
+- DETECTOR_BACKEND=scrfd  
+- SIMILARITY_THRESHOLD=0.65  
+- DEVICE=cpu  
+- INDEX_TYPE=flat  
+- INDEX_PATH=/app/data/faiss_index  
+- API_HOST=0.0.0.0  
+- API_PORT=8000  
+- LOG_LEVEL=INFO  
+
+## Run the service
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+make run
+
+Access:
+- http://localhost:8000/docs  
+- http://localhost:8000/health  
+- http://localhost:8000/metrics  
+
+## Quick test with curl
+curl -X POST "http://localhost:8000/api/v1/enroll/john_doe" \
+  -F "images=@/path/to/john1.jpg" \
+  -F "images=@/path/to/john2.jpg"
+
+curl -X POST "http://localhost:8000/api/v1/identify" \
+  -F "image=@/path/to/query.jpg"
+
+curl -X POST "http://localhost:8000/api/v1/verify/john_doe" \
+  -F "image=@/path/to/test.jpg"
+
+## Threshold calibration
+jupyter notebook notebooks/threshold_calibration.ipynb
+
+Steps:
+1. Load validation dataset  
+2. Compute similarity scores  
+3. Generate ROC/DET curves  
+4. Select threshold  
+5. Update SIMILARITY_THRESHOLD in `.env`  
+
+## Kaggle deployment (optional)
+apt-get update && apt-get install -y libgl1-mesa-glx
+pip install insightface faiss-gpu opencv-python-headless
+
+Kaggle Secrets:
+from kaggle_secrets import UserSecretsClient
+secrets = UserSecretsClient()
+db_url = secrets.get_secret("DATABASE_URL")
+
+## Self-test checklist
+docker compose up -d postgres
+docker compose ps
+alembic upgrade head
+python scripts/init_db.py
+uvicorn api.main:app --reload
+
+curl -X POST "http://localhost:8000/api/v1/enroll/test_person" -F "images=@test_image.jpg"
+curl -X POST "http://localhost:8000/api/v1/identify" -F "image=@query_image.jpg"
+curl http://localhost:8000/metrics
+
+Stop & restart API to verify index reload.
+
+## Common issues & fixes
+InsightFace model download fails:
+python scripts/download_models.py
+
+OpenCV libGL error:
+apt-get install -y libgl1-mesa-glx
+pip install opencv-python-headless
+
+FAISS GPU not found:
+pip install faiss-cpu
+
+Database connection refused:
+docker compose ps
+docker compose logs postgres
+
+Alembic migration errors:
+alembic downgrade base
+alembic upgrade head
+alembic revision --autogenerate -m "fix schema"
+alembic upgrade head
+
+Low accuracy:
+- Run threshold calibration  
+- Increase enrollment images  
+- Enable face quality filtering  
+- Adjust SIMILARITY_THRESHOLD  
+
+## Reset instructions
+make down
+docker compose down -v
+
+rm -rf storage/index/*.faiss
+rm -rf storage/index/*.pkl
+
+alembic downgrade base
+alembic upgrade head
+python scripts/init_db.py
+
+make up

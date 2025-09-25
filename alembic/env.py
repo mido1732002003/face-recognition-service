@@ -6,6 +6,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from alembic import context
 from core.models import Base
 

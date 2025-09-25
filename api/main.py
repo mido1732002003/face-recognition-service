@@ -27,17 +27,26 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting Face Recognition Service")
-    
+
     # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
+    try:
+        logger.info("Creating DB tables...")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("DB tables created successfully")
+    except Exception as e:
+        logger.error(f"DB init failed: {e}")
+
     # Load index
-    index = await get_index()
-    logger.info(f"Index loaded with {index.size()} embeddings")
-    
+    try:
+        logger.info("Loading FAISS index...")
+        index = await get_index()
+        logger.info(f"Index loaded with {index.size()} embeddings")
+    except Exception as e:
+        logger.error(f"Index load failed: {e}")
+
     yield
-    
+
     # Cleanup
     logger.info("Shutting down Face Recognition Service")
     await engine.dispose()

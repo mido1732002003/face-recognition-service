@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, Index, String, Text, func
+from sqlalchemy import DateTime, Float, Index, String, Text, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -17,7 +17,7 @@ class Person(Base):
 
     id: Mapped[str] = mapped_column(String(100), primary_key=True)
     name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    metadata: Mapped[Optional[dict]] = mapped_column(Text, nullable=True)
+    meta: Mapped[Optional[dict]] = mapped_column("metadata", Text, nullable=True)  # ✅ fix
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -25,7 +25,9 @@ class Person(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    faces: Mapped[list["Face"]] = relationship(back_populates="person", cascade="all, delete-orphan")
+    faces: Mapped[list["Face"]] = relationship(
+        back_populates="person", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (Index("idx_person_created_at", "created_at"),)
 
@@ -36,7 +38,11 @@ class Face(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    person_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    person_id: Mapped[str] = mapped_column(
+        String(100),
+        ForeignKey("persons.id", ondelete="CASCADE"),  # ✅ مفتاح خارجي
+        nullable=False,
+    )
     embedding_id: Mapped[int] = mapped_column(nullable=False)  # FAISS index ID
     quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     image_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
@@ -62,14 +68,20 @@ class Enrollment(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    person_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    person_id: Mapped[str] = mapped_column(
+        String(100),
+        ForeignKey("persons.id", ondelete="CASCADE"),  # ✅ مفتاح خارجي
+        nullable=False,
+    )
     face_count: Mapped[int] = mapped_column(default=0)
     status: Mapped[str] = mapped_column(String(50), default="pending")
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         Index("idx_enrollment_person_id", "person_id"),

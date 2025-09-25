@@ -30,7 +30,7 @@ async def seed_sample_data():
         if result.scalar_one_or_none():
             print("Database already contains data, skipping seed")
             return
-        
+
         # Create sample persons
         sample_persons = [
             Person(id="john_doe", name="John Doe"),
@@ -39,23 +39,26 @@ async def seed_sample_data():
             Person(id="alice_brown", name="Alice Brown"),
             Person(id="charlie_davis", name="Charlie Davis"),
         ]
-        
-        for person in sample_persons:
-            session.add(person)
-        
+
+        session.add_all(sample_persons)
+        await session.commit()   # ✅ لازم تسجل الأشخاص الأول
+
         # Create sample enrollments
-        for person in sample_persons:
-            enrollment = Enrollment(
+        enrollments = [
+            Enrollment(
                 id=uuid.uuid4(),
                 person_id=person.id,
                 face_count=0,
                 status="pending",
                 created_at=datetime.utcnow()
             )
-            session.add(enrollment)
-        
+            for person in sample_persons
+        ]
+
+        session.add_all(enrollments)
         await session.commit()
-        print(f"✓ Seeded {len(sample_persons)} sample persons")
+
+        print(f"✓ Seeded {len(sample_persons)} sample persons and {len(enrollments)} enrollments")
 
 
 async def verify_database():
@@ -65,22 +68,22 @@ async def verify_database():
             # Test query
             result = await session.execute(select(Person))
             persons = result.scalars().all()
-            
+
             print(f"✓ Database connection successful")
             print(f"  Found {len(persons)} persons in database")
-            
+
             # Show table counts
             from sqlalchemy import func
-            
+
             person_count = await session.execute(select(func.count(Person.id)))
             face_count = await session.execute(select(func.count(Face.id)))
             enrollment_count = await session.execute(select(func.count(Enrollment.id)))
-            
+
             print(f"\nTable Statistics:")
             print(f"  Persons:     {person_count.scalar()}")
             print(f"  Faces:       {face_count.scalar()}")
             print(f"  Enrollments: {enrollment_count.scalar()}")
-            
+
     except Exception as e:
         print(f"✗ Database verification failed: {e}")
         sys.exit(1)
@@ -89,16 +92,16 @@ async def verify_database():
 async def main():
     """Main initialization function"""
     print("Initializing Face Recognition Database\n")
-    
+
     # Create tables
     await create_tables()
-    
+
     # Seed sample data
     await seed_sample_data()
-    
+
     # Verify setup
     await verify_database()
-    
+
     print("\n✓ Database initialization complete!")
 
 
