@@ -12,7 +12,9 @@ API_URL = "http://localhost:8000/api/v1/identify"  # رابط API الأساسي
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "result": None, "image_data": None})
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "result": None, "image_data": None}
+    )
 
 @app.post("/identify", response_class=HTMLResponse)
 async def identify(request: Request, image: UploadFile = File(...)):
@@ -28,9 +30,15 @@ async def identify(request: Request, image: UploadFile = File(...)):
         result = response.json()
 
         if "matches" in result and result["matches"]:
-            person_name = result["matches"][0].get("name") or result["matches"][0]["person_id"]
+            match = result["matches"][0]
+            person_name = match.get("name") or match["person_id"]
+            similarity = match.get("similarity")
+            if similarity is not None:
+                display_result = f"{person_name} ({similarity*100:.2f}%)"
+            else:
+                display_result = person_name
         else:
-            person_name = "Unknown"
+            display_result = "Unknown"
 
         # نحول الصورة لـ base64 عشان نعرضها في الـ HTML
         image_data = base64.b64encode(image_bytes).decode("utf-8")
@@ -38,7 +46,11 @@ async def identify(request: Request, image: UploadFile = File(...)):
 
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "result": person_name, "image_data": f"data:{mime_type};base64,{image_data}"},
+            {
+                "request": request,
+                "result": display_result,
+                "image_data": f"data:{mime_type};base64,{image_data}",
+            },
         )
     except Exception as e:
         return templates.TemplateResponse(
